@@ -1109,6 +1109,91 @@
     // Init
     window.onload = checkLogin;
 </script>
+
+<script>
+// ── DEMO MODE: bypass auth + mock API ──────────────────────────────────────
+(function() {
+    // Auto-set a demo user so checkLogin() passes immediately
+    if (!localStorage.getItem('lp_id')) {
+        localStorage.setItem('lp_user', 'Demo User');
+        localStorage.setItem('lp_id', '000000000000000000');
+        localStorage.setItem('lp_avatar', '');
+    }
+
+    // Mock /api/* fetch calls so the dashboard renders without a backend
+    const _realFetch = window.fetch.bind(window);
+    window.fetch = function(url, opts) {
+        const u = typeof url === 'string' ? url : (url.url || String(url));
+        if (!u.startsWith('/api')) return _realFetch(url, opts);
+
+        const mockResponse = (body) => Promise.resolve(new Response(JSON.stringify(body), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+        }));
+
+        // /api/data — main dashboard payload
+        if (u === '/api/data') {
+            return mockResponse({
+                plan: 'pro',
+                obfuscationsLeft: 999,
+                maxObfuscations: 999,
+                serverTime: Date.now(),
+                apiKey: 'DEMO-API-KEY-0000-0000-0000-000000000000',
+                apiKeyExpiry: null,
+                scripts: [
+                    { _id: 'scr1', name: 'Demo Script', enabled: true, ffa: false, hwid: false, executions: 1337, key: 'demo-script-key' }
+                ],
+                panels: [
+                    { _id: 'pnl1', name: 'Demo Panel', scriptId: 'scr1' }
+                ],
+                keys: [
+                    { _id: 'key1', key: 'DEMO-KEY-XXXX', panelId: 'pnl1', note: 'Sample key', duration: 'lifetime', createdAt: Date.now() }
+                ],
+                bannedHWIDs: []
+            });
+        }
+
+        // /api/claim-key
+        if (u === '/api/claim-key') return mockResponse({ success: true });
+
+        // /api/remove-key
+        if (u === '/api/remove-key') return mockResponse({ success: true });
+
+        // /api/generate-key
+        if (u === '/api/generate-key') return mockResponse({
+            success: true,
+            key: 'DEMO-GEN-' + Math.random().toString(36).slice(2, 10).toUpperCase()
+        });
+
+        // /api/delete-key/*
+        if (u.startsWith('/api/delete-key/')) return mockResponse({ success: true });
+
+        // /api/toggle-script/*
+        if (u.startsWith('/api/toggle-script/')) return mockResponse({ success: true });
+
+        // /api/toggle-ffa/*
+        if (u.startsWith('/api/toggle-ffa/')) return mockResponse({ success: true });
+
+        // /api/delete-script/*
+        if (u.startsWith('/api/delete-script/')) return mockResponse({ success: true });
+
+        // /api/create-script, /api/update-script
+        if (u === '/api/create-script' || u === '/api/update-script') return mockResponse({ success: true });
+
+        // /api/create-panel, /api/update-panel
+        if (u === '/api/create-panel' || u === '/api/update-panel') return mockResponse({ success: true });
+
+        // /api/ban-hwid, /api/unban-hwid
+        if (u.startsWith('/api/ban-hwid') || u.startsWith('/api/unban-hwid')) return mockResponse({ success: true });
+
+        // /api/obfuscate
+        if (u === '/api/obfuscate') return mockResponse({ success: true, result: '-- [Demo] Obfuscated output here' });
+
+        // fallback
+        return mockResponse({ success: true });
+    };
+})();
+</script>
+
 </body>
 </html>
 
